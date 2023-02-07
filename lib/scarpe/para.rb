@@ -7,11 +7,16 @@ module Scarpe
     end
 
     def render
-      "<p id=#{object_id}>#{text.join}</p>"
+      "<p id=#{object_id}>#{render_text}</p>"
+    end
+
+    def render_text
+      text
+        .map { |t| t.is_a?(Link) ? t.render(self) : t }
+        .join
     end
 
     def replace(new_text)
-      text = new_text
       app.window.eval("document.getElementById(#{object_id}).innerText = \"#{new_text}\"")
     end
 
