@@ -8,37 +8,46 @@ class Scarpe
   class Widget
     class << self
       attr_accessor :widget_classes
+
       def set_window(w)
         @@window = w
       end
+
       def set_document_root(app)
         @@document_root = app
       end
-    end
 
-    def self.inherited(subclass)
-      self.widget_classes ||= []
-      self.widget_classes << subclass
-    end
+      def inherited(subclass)
+        # return if subclass.name == "Scarpe::TextWidget"
 
-    def self.dsl_name
-      n = self.name.split("::").last.chomp("Widget")
-      n.gsub(/(.)([A-Z])/,'\1_\2').downcase
+        self.widget_classes ||= []
+        self.widget_classes << subclass
+      end
+
+      def dsl_name
+        n = self.name.split("::").last.chomp("Widget")
+        n.gsub(/(.)([A-Z])/,'\1_\2').downcase
+      end
     end
 
     def method_missing(name, *args, **kwargs, &block)
-      klass = Widget.widget_classes.detect { |k| k.dsl_name == name.to_s }
+      klass = Widget.widget_classes.detect do |k|
+        k.dsl_name == name.to_s
+      end
 
       super unless klass
 
       ::Scarpe::Widget.define_method(name) do |*args, **kwargs, &block|
         widget_instance = klass.new(*args, **kwargs, &block)
 
-        @children ||= []
-        @children << widget_instance
-  
+        unless klass.ancestors.include?(Scarpe::TextWidget)
+          @children ||= []
+          @children << widget_instance
+        end
+
         widget_instance
       end
+
       self.send(name, *args, **kwargs, &block)
     end
 
@@ -48,7 +57,6 @@ class Scarpe
 
     def to_html
       @children ||= []
-      child_markup = @children.map(&:to_html).join
       if self.respond_to?(:element)
         element { child_markup }
       else
@@ -76,6 +84,11 @@ class Scarpe
       js_args = ["'#{html_id}-#{handler_function_name}'", *args].join(", ")
       "scarpeHandler(#{js_args})"
     end
+
+    private
+
+    def child_markup
+      child_markup = @children.map(&:to_html).join
+    end
   end
 end
-  
